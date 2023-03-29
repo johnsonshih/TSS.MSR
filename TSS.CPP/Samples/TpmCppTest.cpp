@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
     try {
         Samples s;
-        s.RunAllSamples();
+        s.RunCreatePrimaryKey();
     }
     catch (const runtime_error& exc) {
         cerr << "TpmCppTester: " << exc.what() << "\nExiting...\n";

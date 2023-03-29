@@ -34,6 +34,9 @@ class Samples {
         Samples();
         ~Samples();
 
+        void RunCreatePrimaryKey();
+        void CreatePrimaryKey();
+
         // The following methods demonstrate how TSS.C++ is used to perform TPM functions.
         void RunAllSamples();
         void RunDocSamples();
