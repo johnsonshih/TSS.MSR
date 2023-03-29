@@ -35,7 +35,8 @@ class Samples {
         ~Samples();
 
         void RunCreatePrimaryKey();
-        void CreatePrimaryKey();
+        TPM_HANDLE CreatePrimaryKey(const std::string& password, UINT32 keySlot);
+        void CreateChildKey(const TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath);
 
         // The following methods demonstrate how TSS.C++ is used to perform TPM functions.
         void RunAllSamples();

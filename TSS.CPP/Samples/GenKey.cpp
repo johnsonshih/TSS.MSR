@@ -6,6 +6,9 @@
 #include "stdafx.h"
 #include "Samples.h"
 
+extern "C" void tpm2tss_genkey_rsa(BYTE* privateBuffer, UINT32 privateBufferSize,
+                                   BYTE* publicBuffer, UINT32 publicBufferSize);
+
 using namespace std;
 
 static const TPMT_SYM_DEF_OBJECT Aes128Cfb {TPM_ALG_ID::AES, 128, TPM_ALG_ID::CFB};
@@ -16,19 +19,28 @@ static const TPMT_SYM_DEF_OBJECT Aes128Cfb {TPM_ALG_ID::AES, 128, TPM_ALG_ID::CF
 void Samples::RunCreatePrimaryKey()
 {
     _check;
-    CreatePrimaryKey();
-}
 
-void Samples::CreatePrimaryKey()
-{
-    Announce("CreatePrimaryKey");
-
-    // Set Password
-    //std::string password = "abc123";
-    std::string password = "";
+    // Set Parent Password
+    //std::string parentPassword = "pxyz123";
+    std::string parentPassword = "";
 
     // key slot number
     const UINT32 keySlot = 0x1;
+
+    const auto primaryHandle = CreatePrimaryKey(parentPassword, keySlot);
+
+    // Set Child Password
+    //std::string childPassword = "kabc";
+    std::string childPassword = "";
+    std::string filePath = "c:\\temp\\mykey";
+    CreateChildKey(primaryHandle, childPassword, filePath);
+
+    return;
+}
+
+TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32 keySlot)
+{
+    Announce("CreatePrimaryKey");
 
     // template for the primary key
     TPMT_PUBLIC storagePrimaryTemplate(TPM_ALG_ID::SHA1,
@@ -75,5 +87,48 @@ void Samples::CreatePrimaryKey()
     auto persistentPub = tpm.ReadPublic(persistentHandle);
     cout << "Public part of persistent primary" << endl << persistentPub.ToString(false);
 
+    return persistentHandle;
 } // CreatePrimaryKey()
 
+void Samples::CreateChildKey(const TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath)
+{
+    // Now we have a primary we can ask the TPM to make child keys. As always, we start with
+    // a template. Here we specify a 1024-bit signing key to create a primary key the TPM
+    // must be provided with a template.  This is for an RSA1024 signing key.
+    TPMT_PUBLIC templ(TPM_ALG_ID::SHA1,
+        TPMA_OBJECT::sign | TPMA_OBJECT::fixedParent | TPMA_OBJECT::fixedTPM
+        | TPMA_OBJECT::sensitiveDataOrigin | TPMA_OBJECT::userWithAuth,
+        null,                                   // No policy
+            // PKCS1.5: How the signing will be performed
+        TPMS_RSA_PARMS(null, TPMS_SCHEME_RSASSA(TPM_ALG_ID::SHA1), 2048, 65537),
+        TPM2B_PUBLIC_KEY_RSA());
+
+    // Set the use-auth for the new key.
+    ByteVec userAuth(keyPassword.size());
+    std::transform(keyPassword.begin(), keyPassword.end(), userAuth.begin(),
+        [](char c) { return c; });
+    TPMS_SENSITIVE_CREATE sensCreate(userAuth, null);
+
+    // Ask the TPM to create the key
+    auto newSigKey = tpm.Create(parentHandle, sensCreate, templ, null, null);
+
+    cout << "Private part of child key" << endl << newSigKey.outPrivate.ToString(false) << endl;
+    cout << "Public part of child key" << endl << newSigKey.outPublic.ToString(false) << endl;
+
+    TpmBuffer privateTpmBuffer;
+    TpmBuffer publicTpmBuffer;
+    newSigKey.outPrivate.toTpm(privateTpmBuffer);
+    newSigKey.outPublic.toTpm(publicTpmBuffer);
+
+    cout << "Private buffer size of child key" << endl << privateTpmBuffer.size() << endl;
+    cout << "Public buffer size of child key" << endl << publicTpmBuffer.size() << endl;
+
+    auto privateBuffer = privateTpmBuffer.trim();
+    auto publicBuffer = publicTpmBuffer.trim();
+    cout << "Private trimmed buffer size of child key" << endl << privateBuffer.size() << endl;
+    cout << "Public trimmed buffer size of child key" << endl << publicBuffer.size() << endl;
+
+    tpm2tss_genkey_rsa(&privateBuffer[0], privateBuffer.size(),
+                        &publicBuffer[0], publicBuffer.size());
+
+}
