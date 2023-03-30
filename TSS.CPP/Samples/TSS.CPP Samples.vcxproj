@@ -184,6 +184,7 @@
   <ItemGroup>
     <ClInclude Include="Samples.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="tpm2-tss-engine.h" />
     <ClInclude Include="TpmConfig.h" />
     <ClInclude Include="tss2_common.h" />
     <ClInclude Include="tss2_tpm2_types.h" />

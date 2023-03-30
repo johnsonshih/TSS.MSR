@@ -11,6 +11,7 @@
 using namespace TpmCpp;     // TSS.CPP declarations
 using namespace std;
 
+#define null  {}
 
 // Run the samples described in the TSS.C++ Intro paper in turn
 

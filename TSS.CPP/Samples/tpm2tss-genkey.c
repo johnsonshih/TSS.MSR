@@ -9,7 +9,6 @@
 
 #include "tss2_tpm2_types.h"
 
-
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/ossl_typ.h>
@@ -73,24 +72,7 @@
 #endif // OPENSSL_VERSION_NUMBER
 
 
-
-
-typedef enum {
-    KEY_TYPE_BLOB,
-    KEY_TYPE_HANDLE
-} KEY_TYPE;
-
-typedef struct {
-    int emptyAuth;
-    TPM2B_DIGEST userauth;
-    TPM2B_PUBLIC pub;
-    TPM2_HANDLE parent;
-    KEY_TYPE privatetype;
-    union {
-        TPM2B_PRIVATE priv;
-        TPM2_HANDLE handle;
-    };
-} TPM2_DATA;
+#include "tpm2-tss-engine.h"
 
 static struct opt {
     char* filename;
@@ -110,6 +92,8 @@ static struct opt {
     UINT32 privateBufferSize;
     BYTE* publicBuffer;
     UINT32 publicBufferSize;
+    BYTE* rsaBuffer;
+    UINT16 rsaBufferSize;
 } opt;
 
 #ifdef ERR
@@ -123,12 +107,13 @@ int verbose = 1;
 
 
 static TPM2_DATA* genkey_rsa();
-static int tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password, TPM2_HANDLE parentHandle);
-static int populate_rsa(RSA* rsa);
-int tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, const char* filename);
+static int tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password, TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
+static int populate_rsa(RSA* rsa, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
+int tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, BYTE* privateBuffer, UINT32 privateBufferSize,
+    BYTE* publicBuffer, UINT32 publicBufferSize, const char* filename);
 
 
-void tpm2tss_genkey_rsa(BYTE* privateBuffer, UINT32 privateBufferSize,
+void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize, BYTE* privateBuffer, UINT32 privateBufferSize,
     BYTE* publicBuffer, UINT32 publicBufferSize)
 {
     TPM2_DATA* tpm2Data = NULL;
@@ -150,9 +135,12 @@ void tpm2tss_genkey_rsa(BYTE* privateBuffer, UINT32 privateBufferSize,
 
     opt.filename = "c:\\temp\\mykey";
     opt.parent = 0x81000001;
+    opt.exponent = inExponent;
     //opt.password = "kabc";
     //opt.parentpw = "pxyz123";
 
+    opt.rsaBuffer = rsaBuffer;
+    opt.rsaBufferSize = rsaBufferSize;
     opt.privateBuffer = privateBuffer;
     opt.privateBufferSize = privateBufferSize;
     opt.publicBuffer = publicBuffer;
@@ -168,7 +156,7 @@ void tpm2tss_genkey_rsa(BYTE* privateBuffer, UINT32 privateBufferSize,
     /* Write the key to disk */
     VERB("Writing key to disk\n");
 
-    if (!tpm2tss_tpm2data_write(tpm2Data, opt.filename)) {
+    if (!tpm2tss_tpm2data_write(tpm2Data, privateBuffer, privateBufferSize, publicBuffer, publicBufferSize, opt.filename)) {
         ERR("Error writing file\n");
         OPENSSL_free(tpm2Data);
         //return 1;
@@ -199,7 +187,7 @@ genkey_rsa()
         BN_free(e);
         return NULL;
     }
-    if (!tpm2tss_rsa_genkey(rsa, opt.keysize, e, opt.password, opt.parent)) {
+    if (!tpm2tss_rsa_genkey(rsa, opt.keysize, e, opt.password, opt.parent, opt.exponent, opt.rsaBuffer, opt.rsaBufferSize)) {
         BN_free(e);
         RSA_free(rsa);
         ERR("Error: Generating key failed\n");
@@ -226,11 +214,9 @@ genkey_rsa()
 
 static int
 tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password,
-    TPM2_HANDLE parentHandle)
+    TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize)
 {
     //DBG("Generating RSA key for %i bits keysize.\n", bits);
-    VERB("sizeof(TPM2B_PRIVATE)=0x%x\n", sizeof(TPM2B_PRIVATE));
-    VERB("sizeof(TPM2B_PUBLIC)=0x%x\n", sizeof(TPM2B_PUBLIC));
 
     TSS2_RC r = TSS2_RC_SUCCESS;
     //ESYS_CONTEXT* esys_ctx = NULL;
@@ -294,15 +280,13 @@ tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password,
 
     //tpm2Data->pub = *keyPublic;
     //tpm2Data->priv = *keyPrivate;
-    memcpy(&tpm2Data->pub, opt.publicBuffer, opt.publicBufferSize);
-    memcpy(&tpm2Data->priv, opt.privateBuffer, opt.privateBufferSize);
 
     if (!RSA_set_app_data(rsa, tpm2Data)) {
         //ERR(tpm2tss_rsa_genkey, TPM2TSS_R_GENERAL_FAILURE);
         goto error;
     }
 
-    if (!populate_rsa(rsa)) {
+    if (!populate_rsa(rsa, inExponent, rsaBuffer, rsaBufferSize)) {
         goto error;
     }
 
@@ -327,22 +311,18 @@ end:
 }
 
 static int
-populate_rsa(RSA* rsa)
+populate_rsa(RSA* rsa, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize)
 {
     TPM2_DATA* tpm2Data = RSA_get_app_data(rsa);
     UINT32 exponent;
-
-    if (tpm2Data == NULL)
-        goto error;
-
-    exponent = tpm2Data->pub.publicArea.parameters.rsaDetail.exponent;
+    exponent = inExponent;
     if (!exponent)
         exponent = 0x10001;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000
     /* Setting the public portion of the key */
-    rsa->n = BN_bin2bn(tpm2Data->pub.publicArea.unique.rsa.buffer,
-        tpm2Data->pub.publicArea.unique.rsa.size, rsa->n);
+    rsa->n = BN_bin2bn(rsaBuffer,
+        rsaBufferSize, rsa->n);
     if (rsa->n == NULL) {
         ERR(populate_rsa, ERR_R_MALLOC_FAILURE);
         goto error;
@@ -400,9 +380,8 @@ populate_rsa(RSA* rsa)
     }
     BN_set_word(rsa->iqmp, 0);
 #else /* OPENSSL_VERSION_NUMBER < 0x10100000 */
-    //BIGNUM* n = BN_bin2bn(tpm2Data->pub.publicArea.unique.rsa.buffer,
-    //    tpm2Data->pub.publicArea.unique.rsa.size, NULL);
-    BIGNUM* n = BN_new();
+    BIGNUM* n = BN_bin2bn(rsaBuffer,
+        rsaBufferSize, NULL);
     BIGNUM* e = BN_new();
     BIGNUM* d = BN_new();
     BIGNUM* p = BN_new();
@@ -490,16 +469,17 @@ IMPLEMENT_PEM_write_bio(TSSPRIVKEY, TSSPRIVKEY, TSSPRIVKEY_PEM_STRING, TSSPRIVKE
 IMPLEMENT_PEM_read_bio(TSSPRIVKEY, TSSPRIVKEY, TSSPRIVKEY_PEM_STRING, TSSPRIVKEY);
 
 int
-tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, const char* filename)
+tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, BYTE* privateBuffer, UINT32 privateBufferSize,
+    BYTE* publicBuffer, UINT32 publicBufferSize, const char* filename)
 {
     //TSS2_RC r;
     BIO* bio = NULL;
     TSSPRIVKEY* tpk = NULL;
     BIGNUM* bn_parent = NULL;
 
-    uint8_t privbuf[sizeof(tpm2Data->priv)];
-    uint8_t pubbuf[sizeof(tpm2Data->pub)];
-    size_t privbuf_len = 0, pubbuf_len = 0;
+    //uint8_t privbuf[sizeof(tpm2Data->priv)];
+    //uint8_t pubbuf[sizeof(tpm2Data->pub)];
+    //size_t privbuf_len = 0, pubbuf_len = 0;
 
     if ((bio = BIO_new_file(filename, "w")) == NULL) {
         ERR(tpm2tss_tpm2data_write, TPM2TSS_R_FILE_WRITE);
@@ -546,8 +526,10 @@ tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, const char* filename)
         BN_set_word(bn_parent, TPM2_RH_OWNER);
     }
     BN_to_ASN1_INTEGER(bn_parent, tpk->parent);
-    ASN1_STRING_set(tpk->privkey, &privbuf[0], privbuf_len);
-    ASN1_STRING_set(tpk->pubkey, &pubbuf[0], pubbuf_len);
+    //ASN1_STRING_set(tpk->privkey, &privbuf[0], privbuf_len);
+    //ASN1_STRING_set(tpk->pubkey, &pubbuf[0], pubbuf_len);
+    ASN1_STRING_set(tpk->privkey, privateBuffer, privateBufferSize);
+    ASN1_STRING_set(tpk->pubkey, publicBuffer, publicBufferSize);
 
     PEM_write_bio_TSSPRIVKEY(bio, tpk);
     TSSPRIVKEY_free(tpk);

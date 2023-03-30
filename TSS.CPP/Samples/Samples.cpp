@@ -4,16 +4,20 @@
  */
 
 #include "stdafx.h"
+#include "Tpm2.h"
+
 #include "Samples.h"
 #include "TpmConfig.h"
 
 using namespace std;
+using namespace TpmCpp;
 
 static const TPMT_SYM_DEF_OBJECT Aes128Cfb {TPM_ALG_ID::AES, 128, TPM_ALG_ID::CFB};
 
 // Verify that the sample did not leave any dangling handles in the TPM.
 #define _check AssertNoLoadedKeys()
 
+#define null  {}
 
 Samples::Samples()
 {
