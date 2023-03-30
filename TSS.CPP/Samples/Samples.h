@@ -5,8 +5,6 @@
 
 #pragma once
 
-using namespace TpmCpp;
-
 extern bool UseSimulator;
 
 // Beginning of the TPM NV indices range used by the samples
@@ -17,17 +15,16 @@ constexpr int NvRangeEnd = 3000;
 constexpr int PersRangeBegin = 2101;
 constexpr int PersRangeEnd = 3000;
 
-inline TPM_HANDLE RandomNvHandle()
+inline TpmCpp::TPM_HANDLE RandomNvHandle()
 {
-    return TPM_HANDLE::NV(Helpers::RandomInt(NvRangeBegin, NvRangeEnd));
+    return TpmCpp::TPM_HANDLE::NV(TpmCpp::Helpers::RandomInt(NvRangeBegin, NvRangeEnd));
 }
 
-inline TPM_HANDLE RandomPersHandle()
+inline TpmCpp::TPM_HANDLE RandomPersHandle()
 {
-    return TPM_HANDLE::Persistent(Helpers::RandomInt(PersRangeBegin, PersRangeEnd));
+    return TpmCpp::TPM_HANDLE::Persistent(TpmCpp::Helpers::RandomInt(PersRangeBegin, PersRangeEnd));
 }
 
-#define null  {}
 
 class Samples {
     public:
@@ -35,8 +32,8 @@ class Samples {
         ~Samples();
 
         void RunCreatePrimaryKey();
-        TPM_HANDLE CreatePrimaryKey(const std::string& password, UINT32 keySlot);
-        void CreateChildKey(const TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath);
+        TpmCpp::TPM_HANDLE CreatePrimaryKey(const std::string& password, UINT32 keySlot);
+        void CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath);
 
         // The following methods demonstrate how TSS.C++ is used to perform TPM functions.
         void RunAllSamples();
@@ -101,9 +98,9 @@ class Samples {
         /// <summary> Checks to see that there are no keys left in the TPM </summary>
         void AssertNoLoadedKeys();
 
-        void TpmCallback(const ByteVec& command, const ByteVec& response);
+        void TpmCallback(const TpmCpp::ByteVec& command, const TpmCpp::ByteVec& response);
 
-        static void TpmCallbackStatic(const ByteVec& command, const ByteVec& response, void *context)
+        static void TpmCallbackStatic(const TpmCpp::ByteVec& command, const TpmCpp::ByteVec& response, void *context)
         {
             static_cast<Samples*>(context)->TpmCallback(command, response);
         }
@@ -114,17 +111,17 @@ class Samples {
         void SetColor(UINT16 col);
         int GetSystemTime(bool reset = false);
         void Sleep(int numMillisecs);
-        TPM_HANDLE MakeHmacPrimaryWithPolicy(const TPM_HASH& policy, const ByteVec& keyAuth);
-        TPM_HANDLE MakeStoragePrimary(AUTH_SESSION* sess = nullptr);
-        TPM_HANDLE MakeDuplicableStoragePrimary(const ByteVec& policyDigest);
-        TPM_HANDLE MakeChildSigningKey(TPM_HANDLE parent, bool restricted);
-        TPM_HANDLE MakeEndorsementKey();
-        void TestAuthSession(AUTH_SESSION& sess);
+        TpmCpp::TPM_HANDLE MakeHmacPrimaryWithPolicy(const TpmCpp::TPM_HASH& policy, const TpmCpp::ByteVec& keyAuth);
+        TpmCpp::TPM_HANDLE MakeStoragePrimary(TpmCpp::AUTH_SESSION* sess = nullptr);
+        TpmCpp::TPM_HANDLE MakeDuplicableStoragePrimary(const TpmCpp::ByteVec& policyDigest);
+        TpmCpp::TPM_HANDLE MakeChildSigningKey(TpmCpp::TPM_HANDLE parent, bool restricted);
+        TpmCpp::TPM_HANDLE MakeEndorsementKey();
+        void TestAuthSession(TpmCpp::AUTH_SESSION& sess);
 
-        _TPMCPP Tpm2 tpm;
-        _TPMCPP TpmDevice *device;
+        _TPMCPP TpmCpp::Tpm2 tpm;
+        _TPMCPP TpmCpp::TpmDevice *device;
 
-        std::map<_TPMCPP TPM_CC, int> commandsInvoked;
-        std::map<_TPMCPP TPM_RC, int> responses;
-        std::vector<_TPMCPP TPM_CC> commandsImplemented;
+        std::map<_TPMCPP TpmCpp::TPM_CC, int> commandsInvoked;
+        std::map<_TPMCPP TpmCpp::TPM_RC, int> responses;
+        std::vector<_TPMCPP TpmCpp::TPM_CC> commandsImplemented;
 };
