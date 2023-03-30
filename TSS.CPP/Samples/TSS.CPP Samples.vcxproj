@@ -182,7 +182,6 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MarshalUtil.h" />
     <ClInclude Include="Samples.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="tpm2-tss-engine.h" />
@@ -193,7 +192,6 @@
   <ItemGroup>
     <ClCompile Include="DocSamples.cpp" />
     <ClCompile Include="GenKey.cpp" />
-    <ClCompile Include="MarshalUtil.cpp" />
     <ClCompile Include="Samples.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
