@@ -122,41 +122,12 @@ void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::
     cout << "Public part of child key" << endl << newSigKey.outPublic.ToString(false) << endl;
 
     const auto exponent = dynamic_cast<TpmCpp::TPMS_RSA_PARMS*>(&*newSigKey.outPublic.parameters)->exponent;
-    cout << "exponent of child key" << endl << exponent << endl;
-
     TpmCpp::TPM2B_PUBLIC_KEY_RSA* rsaPubKey = dynamic_cast<TpmCpp::TPM2B_PUBLIC_KEY_RSA*>(&*newSigKey.outPublic.unique);
 
-#if 1
-    typedef struct {
-        UINT16        size;
-        BYTE          buffer[4096];
-    } TPM2B;
+    auto privateBuffer = newSigKey.outPrivate.toBytes();
+    auto publicBuffer = newSigKey.outPublic.toBytes();
 
-    typedef struct {
-        UINT32        exponent;      // The public exponent pointer
-        TPM2B* publicKey;     // Pointer to the public modulus
-        TPM2B* privateKey;    // The private exponent (not a prime)
-    } RSA_KEY;
-#endif 
-
-    TPM2B rsaPubKeyBuf;
-    rsaPubKeyBuf.size = (UINT16)rsaPubKey->buffer.size();
-    memcpy(rsaPubKeyBuf.buffer, &rsaPubKey->buffer[0], rsaPubKey->buffer.size());
-
-    TpmBuffer privateTpmBuffer;
-    TpmBuffer publicTpmBuffer;
-    newSigKey.outPrivate.toTpm(privateTpmBuffer);
-    newSigKey.outPublic.toTpm(publicTpmBuffer);
-
-    cout << "Private buffer size of child key" << endl << privateTpmBuffer.size() << endl;
-    cout << "Public buffer size of child key" << endl << publicTpmBuffer.size() << endl;
-
-    auto privateBuffer = privateTpmBuffer.trim();
-    auto publicBuffer = publicTpmBuffer.trim();
-    cout << "Private trimmed buffer size of child key" << endl << privateBuffer.size() << endl;
-    cout << "Public trimmed buffer size of child key" << endl << publicBuffer.size() << endl;
-
-    tpm2tss_genkey_rsa(exponent, &rsaPubKey->buffer[0], (UINT16)rsaPubKey->buffer.size(),
+    tpm2tss_genkey_rsa(exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
         privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size());
 
 }

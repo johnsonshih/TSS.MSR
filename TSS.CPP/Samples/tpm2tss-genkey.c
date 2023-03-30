@@ -108,8 +108,7 @@ int verbose = 1;
 
 static TPM2_DATA* genkey_rsa();
 static int tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password, TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
-static int
-populate_rsa(RSA* rsa, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
+static int populate_rsa(RSA* rsa, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
 int tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, BYTE* privateBuffer, UINT32 privateBufferSize,
     BYTE* publicBuffer, UINT32 publicBufferSize, const char* filename);
 
