@@ -96,28 +96,27 @@ TpmCpp::TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32
 
 void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath)
 {
-    using namespace TpmCpp;
-
     // Now we have a primary we can ask the TPM to make child keys. As always, we start with
     // a template. Here we specify a 1024-bit signing key to create a primary key the TPM
     // must be provided with a template.  This is for an RSA1024 signing key.
-    TpmCpp::TPMT_PUBLIC templ(TpmCpp::TPM_ALG_ID::SHA1,
-        TPMA_OBJECT::sign | TPMA_OBJECT::fixedParent | TPMA_OBJECT::fixedTPM
-        | TPMA_OBJECT::sensitiveDataOrigin | TPMA_OBJECT::userWithAuth,
+    TpmCpp::TPMT_PUBLIC templ(TpmCpp::TPM_ALG_ID::SHA256,
+        TpmCpp::TPMA_OBJECT::sign | TpmCpp::TPMA_OBJECT::decrypt
+        | TpmCpp::TPMA_OBJECT::fixedParent | TpmCpp::TPMA_OBJECT::fixedTPM
+        | TpmCpp::TPMA_OBJECT::noDA
+        | TpmCpp::TPMA_OBJECT::sensitiveDataOrigin | TpmCpp::TPMA_OBJECT::userWithAuth,
         {},                                   // No policy
-            // PKCS1.5: How the signing will be performed
-        TpmCpp::TPMS_RSA_PARMS({}, TPMS_SCHEME_RSASSA(TPM_ALG_ID::SHA1), 2048, 65537),
+        TpmCpp::TPMS_RSA_PARMS({}, TpmCpp::TPMS_NULL_SIG_SCHEME(), 2048, 65537),
         TpmCpp::TPM2B_PUBLIC_KEY_RSA());
 
     // Set the use-auth for the new key.
-    ByteVec userAuth(keyPassword.size());
+    TpmCpp::ByteVec userAuth(keyPassword.size());
     std::transform(keyPassword.begin(), keyPassword.end(), userAuth.begin(),
         [](char c) { return c; });
     TpmCpp::TPMS_SENSITIVE_CREATE sensCreate(userAuth, {});
 
     // Ask the TPM to create the key
     auto newSigKey = tpm.Create(parentHandle, sensCreate, templ, {}, {});
-   
+
     cout << "Private part of child key" << endl << newSigKey.outPrivate.ToString(false) << endl;
     cout << "Public part of child key" << endl << newSigKey.outPublic.ToString(false) << endl;
 
@@ -129,5 +128,4 @@ void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::
 
     tpm2tss_genkey_rsa(exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
         privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size());
-
 }
