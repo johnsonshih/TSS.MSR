@@ -125,7 +125,7 @@ void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::
     TpmCpp::TPM2B_PUBLIC_KEY_RSA* rsaPubKey = dynamic_cast<TpmCpp::TPM2B_PUBLIC_KEY_RSA*>(&*newSigKey.outPublic.unique);
 
     auto privateBuffer = newSigKey.outPrivate.toBytes();
-    auto publicBuffer = newSigKey.outPublic.toBytes();
+    auto publicBuffer = newSigKey.outPublic.asTpm2B();
 
     tpm2tss_genkey_rsa(exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
         privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size());
