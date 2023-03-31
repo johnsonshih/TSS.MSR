@@ -112,6 +112,12 @@
     <ProjectReference>
       <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
     </ProjectReference>
+    <PostBuildEvent>
+      <Command>copy /Y $(ProjectDir)OsslLib\libcrypto-1_1.dll $(OutDir)libcrypto-1_1.dll</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Populate openssl crypt dll</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -157,6 +163,12 @@
       <AdditionalDependencies>.\OsslLib\libcrypto.lib;tss.cpp.lib;wsock32.lib;kernel32.lib;user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y $(ProjectDir)OsslLib\libcrypto-1_1.dll $(OutDir)libcrypto-1_1.dll</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Populate openssl crypt dll</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
