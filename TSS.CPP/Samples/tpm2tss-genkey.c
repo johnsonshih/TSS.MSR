@@ -136,8 +136,8 @@ void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize
     opt.filename = "c:\\temp\\mykey";
     opt.parent = 0x81000001;
     opt.exponent = inExponent;
-    //opt.password = "kabc";
-    //opt.parentpw = "pxyz123";
+    opt.password = "pxyz";
+    opt.parentpw = "keyauth";
 
     opt.rsaBuffer = rsaBuffer;
     opt.rsaBufferSize = rsaBufferSize;

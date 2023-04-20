@@ -24,8 +24,8 @@ void Samples::RunCreatePrimaryKey()
     _check;
 
     // Set Parent Password
-    //std::string parentPassword = "pxyz123";
-    std::string parentPassword = "";
+    std::string parentPassword = "keyauth";
+    //std::string parentPassword = "";
 
     // key slot number
     const UINT32 keySlot = 0x1;
@@ -33,10 +33,10 @@ void Samples::RunCreatePrimaryKey()
     const auto primaryHandle = CreatePrimaryKey(parentPassword, keySlot);
 
     // Set Child Password
-    //std::string childPassword = "kabc";
-    std::string childPassword = "";
+    std::string childPassword = "pxyz";
+    //std::string childPassword = "";
     std::string filePath = "c:\\temp\\mykey";
-    CreateChildKey(primaryHandle, childPassword, filePath);
+    CreateChildKey(primaryHandle, parentPassword, childPassword, filePath);
 
     return;
 }
@@ -90,11 +90,12 @@ TpmCpp::TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32
     // ReadPublic of the new persistent one
     auto persistentPub = tpm.ReadPublic(persistentHandle);
     cout << "Public part of persistent primary" << endl << persistentPub.ToString(false);
+    persistentHandle.SetAuth(userAuth);
 
     return persistentHandle;
 } // CreatePrimaryKey()
 
-void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath)
+void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& parentPassword, const std::string& keyPassword, const std::string& filePath)
 {
     // Now we have a primary we can ask the TPM to make child keys. As always, we start with
     // a template. Here we specify a 1024-bit signing key to create a primary key the TPM
