@@ -46,7 +46,7 @@ void CmdLine_Help(ostream& ostr)
         << "   -s (sim) - use locally running TPM simulator" << endl
         << "   -t (tbs|sys) - use system TPM" << endl
         << "   -o (out) - output file" << endl
-        << "   -w (parentpw) - specify parent password" << endl
+        << "   -a (parentpw) - specify parent password" << endl
         << "   -p (pw) - use child key password" << endl;
 }
 
