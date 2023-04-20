@@ -20,25 +20,14 @@ static const TpmCpp::TPMT_SYM_DEF_OBJECT Aes128Cfb { TpmCpp::TPM_ALG_ID::AES, 12
 // Verify that the sample did not leave any dangling handles in the TPM.
 #define _check AssertNoLoadedKeys()
 
-void Samples::RunCreatePrimaryKey()
+void Samples::RunCreatePrimaryKey(const std::string& outfilePath, const std::string& parentPassword, const std::string& keyPassword)
 {
     _check;
 
-    // Set Parent Password
-    std::string parentPassword = "keyauth";
-    //std::string parentPassword = "";
-
     // key slot number
     const UINT32 keySlot = 0x1;
-
     const auto primaryHandle = CreatePrimaryKey(parentPassword, keySlot);
-
-    // Set Child Password
-    std::string childPassword = "pxyz";
-    //std::string childPassword = "";
-    std::string filePath = "c:\\temp\\mykey";
-    CreateChildKey(primaryHandle, parentPassword, childPassword, filePath);
-
+    CreateChildKey(primaryHandle, parentPassword, keyPassword, outfilePath);
     return;
 }
 
