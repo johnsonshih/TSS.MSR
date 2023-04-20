@@ -18,6 +18,9 @@ using namespace std;
 using namespace TpmCpp;
 
 bool UseSimulator = true;
+std::string outFilePath;
+std::string parentPassword;
+std::string keyPassword;
 
 static bool
 CmdLine_IsOpt(
@@ -41,45 +44,119 @@ void CmdLine_Help(ostream& ostr)
         << "Supported options:" << endl
         << "   -h (help|?) - print this message" << endl
         << "   -s (sim) - use locally running TPM simulator" << endl
-        << "   -t (tbs|sys) - use system TPM" << endl;
+        << "   -t (tbs|sys) - use system TPM" << endl
+        << "   -o (out) - output file" << endl
+        << "   -w (parentpw) - specify parent password" << endl
+        << "   -p (pw) - use child key password" << endl;
 }
 
 int CmdLine_Parse(int argc, TCHAR *argv[])
 {
-    if (argc > 2)
+    if (argc > 8)
     {
         cerr << "Too many command line option can be specified." << endl;
         CmdLine_Help(cerr);
         return -1;
     }
-    if (argc == 1 || CmdLine_IsOpt(argv[1], _T("sim"), _T("s")))
-    {
-        UseSimulator = true;
-        return 0;
-    }
-    if (CmdLine_IsOpt(argv[1], _T("tbs"), _T("t")) ||
-        CmdLine_IsOpt(argv[1], _T("sys")))
-    {
-        UseSimulator = false;
-        return 0;
-    }
-    if (CmdLine_IsOpt(argv[1], _T("help"), _T("h")) ||
+
+    if (argc == 1 ||
+        CmdLine_IsOpt(argv[1], _T("help"), _T("h")) ||
         CmdLine_IsOpt(argv[1], _T("?"), _T("?")))
     {
         CmdLine_Help(cout);
         return 1;
     }
 
-    cerr << "Unrecognized command line option: '" << argv[1] << "'" << endl;
-    CmdLine_Help(cerr);
-    return -2;
+    if (argc < 4)
+    {
+        cerr << "Insufficient command line options specified." << endl;
+        CmdLine_Help(cerr);
+        return -1;
+    }
+
+    int invalidOptPosition = -1;
+
+    if (CmdLine_IsOpt(argv[1], _T("sim"), _T("s")))
+    {
+        UseSimulator = true;
+    }
+    else if (CmdLine_IsOpt(argv[1], _T("tbs"), _T("t")) ||
+        CmdLine_IsOpt(argv[1], _T("sys")))
+    {
+        UseSimulator = false;
+    }
+    else
+    {
+        invalidOptPosition = 1;
+    }
+
+    if (argc > 3)
+    {
+        if (invalidOptPosition < 0)
+        {
+            if (CmdLine_IsOpt(argv[2], _T("out"), _T("o")))
+            {
+                outFilePath.assign(argv[3]);
+            }
+            else
+            {
+                invalidOptPosition = 2;
+            }
+        }
+    }
+
+    bool parentpwFound = false;
+    bool keypwFound = false;
+    if (argc > 5) {
+        if (invalidOptPosition < 0) {
+            if (CmdLine_IsOpt(argv[4], _T("parentpw"), _T("a"))) {
+                parentPassword = std::string((char*)argv[5]);
+                parentpwFound = true;
+            }
+            else if (CmdLine_IsOpt(argv[4], _T("pw"), _T("p"))) {
+                keyPassword = std::string((char*)argv[5]);
+                keypwFound = true;
+            } else {
+                invalidOptPosition = 4;
+            }
+        }
+    }
+
+    if (argc > 7) {
+        if (invalidOptPosition < 0) {
+            if (!parentpwFound) {
+                if (CmdLine_IsOpt(argv[6], _T("parentpw"), _T("a"))) {
+                    parentPassword = std::string((char*)argv[7]);
+                    parentpwFound = true;
+                }
+            }
+
+            if (!keypwFound) {
+                if (CmdLine_IsOpt(argv[6], _T("pw"), _T("p"))) {
+                    keyPassword = std::string((char*)argv[7]);
+                    keypwFound = true;
+                }
+            }
+
+            if (!parentpwFound || !keypwFound) {
+                invalidOptPosition = 6;
+            }
+        }
+    }
+
+    if (invalidOptPosition > 0) {
+        cerr << "Unrecognized command line option: '" << argv[invalidOptPosition] << "'" << endl;
+        CmdLine_Help(cerr);
+        return -2;
+    }
+    return 0;
 }
 
 
 #ifdef WIN32
 _CrtMemState MemState;
 
-int _tmain(int argc, _TCHAR *argv[])
+int _tmain(int argc, TCHAR *argv[])
 {
     _CrtMemCheckpoint(&MemState);
 
@@ -95,7 +172,7 @@ int main(int argc, char *argv[])
 
     try {
         Samples s;
-        s.RunCreatePrimaryKey();
+        s.RunCreatePrimaryKey(outFilePath, parentPassword, keyPassword);
     }
     catch (const runtime_error& exc) {
         cerr << "TpmCppTester: " << exc.what() << "\nExiting...\n";

@@ -9,8 +9,9 @@
 
 #include "Samples.h"
 
-extern "C" void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize, BYTE* privateBuffer, UINT32 privateBufferSize,
-                                   BYTE* publicBuffer, UINT32 publicBufferSize);
+extern "C" void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE * rsaBuffer, UINT16 rsaBufferSize, BYTE * privateBuffer, UINT32 privateBufferSize,
+    BYTE * publicBuffer, UINT32 publicBufferSize,
+    const char* parentPassword, const char* keyPassword, const char* filePath);
 
 using namespace std;
 
@@ -19,25 +20,14 @@ static const TpmCpp::TPMT_SYM_DEF_OBJECT Aes128Cfb { TpmCpp::TPM_ALG_ID::AES, 12
 // Verify that the sample did not leave any dangling handles in the TPM.
 #define _check AssertNoLoadedKeys()
 
-void Samples::RunCreatePrimaryKey()
+void Samples::RunCreatePrimaryKey(const std::string& outfilePath, const std::string& parentPassword, const std::string& keyPassword)
 {
     _check;
 
-    // Set Parent Password
-    //std::string parentPassword = "pxyz123";
-    std::string parentPassword = "";
-
     // key slot number
     const UINT32 keySlot = 0x1;
-
     const auto primaryHandle = CreatePrimaryKey(parentPassword, keySlot);
-
-    // Set Child Password
-    //std::string childPassword = "kabc";
-    std::string childPassword = "";
-    std::string filePath = "c:\\temp\\mykey";
-    CreateChildKey(primaryHandle, childPassword, filePath);
-
+    CreateChildKey(primaryHandle, parentPassword, keyPassword, outfilePath);
     return;
 }
 
@@ -90,11 +80,12 @@ TpmCpp::TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32
     // ReadPublic of the new persistent one
     auto persistentPub = tpm.ReadPublic(persistentHandle);
     cout << "Public part of persistent primary" << endl << persistentPub.ToString(false);
+    persistentHandle.SetAuth(userAuth);
 
     return persistentHandle;
 } // CreatePrimaryKey()
 
-void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& keyPassword, const std::string& filePath)
+void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::string& parentPassword, const std::string& keyPassword, const std::string& filePath)
 {
     // Now we have a primary we can ask the TPM to make child keys. As always, we start with
     // a template. Here we specify a 1024-bit signing key to create a primary key the TPM
@@ -127,5 +118,5 @@ void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::
     auto publicBuffer = newSigKey.outPublic.asTpm2B();
 
     tpm2tss_genkey_rsa(exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
-        privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size());
+        privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size(), parentPassword.c_str(), keyPassword.c_str(), filePath.c_str());
 }
