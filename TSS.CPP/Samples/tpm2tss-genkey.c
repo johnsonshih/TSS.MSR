@@ -75,16 +75,16 @@
 #include "tpm2-tss-engine.h"
 
 static struct opt {
-    char* filename;
+    const char* filename;
     TPMI_ALG_PUBLIC alg;
     TPMI_ECC_CURVE curve;
     int exponent;
     char* importpub;
     char* importtpm;
     char* ownerpw;
-    char* password;
+    const char* password;
     TPM2_HANDLE parent;
-    char* parentpw;
+    const char* parentpw;
     int keysize;
     int verbose;
     char* tcti_conf;
@@ -107,14 +107,14 @@ int verbose = 1;
 
 
 static TPM2_DATA* genkey_rsa();
-static int tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password, TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
+static int tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, const char* password, TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
 static int populate_rsa(RSA* rsa, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize);
 int tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, BYTE* privateBuffer, UINT32 privateBufferSize,
     BYTE* publicBuffer, UINT32 publicBufferSize, const char* filename);
 
 
 void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize, BYTE* privateBuffer, UINT32 privateBufferSize,
-    BYTE* publicBuffer, UINT32 publicBufferSize)
+    BYTE* publicBuffer, UINT32 publicBufferSize, const char* parentPassword, const char* keyPassword, const char* filePath)
 {
     TPM2_DATA* tpm2Data = NULL;
 
@@ -133,11 +133,11 @@ void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize
     opt.verbose = 0;
     opt.tcti_conf = NULL;
 
-    opt.filename = "c:\\temp\\mykey";
+    opt.filename = filePath;
     opt.parent = 0x81000001;
     opt.exponent = inExponent;
-    opt.password = "pxyz";
-    opt.parentpw = "keyauth";
+    opt.password = keyPassword;
+    opt.parentpw = parentPassword;
 
     opt.rsaBuffer = rsaBuffer;
     opt.rsaBufferSize = rsaBufferSize;
@@ -213,7 +213,7 @@ genkey_rsa()
 
 
 static int
-tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, char* password,
+tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, const char* password,
     TPM2_HANDLE parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize)
 {
     //DBG("Generating RSA key for %i bits keysize.\n", bits);
