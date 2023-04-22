@@ -37,12 +37,12 @@ TpmCpp::TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32
     Announce("CreatePrimaryKey");
 
     // template for the primary key
-    TpmCpp::TPMT_PUBLIC storagePrimaryTemplate(TPM_ALG_ID::SHA1,
+    TpmCpp::TPMT_PUBLIC storagePrimaryTemplate(TPM_ALG_ID::SHA256,
         TPMA_OBJECT::decrypt | TPMA_OBJECT::restricted
         | TPMA_OBJECT::fixedParent | TPMA_OBJECT::fixedTPM
         | TPMA_OBJECT::sensitiveDataOrigin | TPMA_OBJECT::userWithAuth,
         {},           // No policy
-        TpmCpp::TPMS_RSA_PARMS(Aes128Cfb, TpmCpp::TPMS_NULL_ASYM_SCHEME(), 2048, 65537),
+        TpmCpp::TPMS_RSA_PARMS(Aes128Cfb, TpmCpp::TPMS_NULL_ASYM_SCHEME(), 2048, 0),
         TpmCpp::TPM2B_PUBLIC_KEY_RSA());
 
     // Set the use-auth for the new key.
@@ -50,6 +50,10 @@ TpmCpp::TPM_HANDLE Samples::CreatePrimaryKey(const std::string& password, UINT32
     std::transform(password.begin(), password.end(), userAuth.begin(),
         [](char c) { return c; });
     TpmCpp::TPMS_SENSITIVE_CREATE sensCreate(userAuth, {});
+
+    // Start a simple HMAC authorization session (no salt, no encryption, no bound-object)
+    AUTH_SESSION sess = tpm.StartAuthSession(TPM_SE::HMAC, TPM_ALG_ID::SHA1);
+    tpm[sess];
 
     // Create the key (no PCR-state captured)
     auto newPrimary = tpm._AllowErrors()
