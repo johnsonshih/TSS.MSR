@@ -113,7 +113,7 @@ int tpm2tss_tpm2data_write(const TPM2_DATA* tpm2Data, BYTE* privateBuffer, UINT3
     BYTE* publicBuffer, UINT32 publicBufferSize, const char* filename);
 
 
-void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize, BYTE* privateBuffer, UINT32 privateBufferSize,
+void tpm2tss_genkey_rsa(UINT32 parentHandle, UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize, BYTE* privateBuffer, UINT32 privateBufferSize,
     BYTE* publicBuffer, UINT32 publicBufferSize, const char* parentPassword, const char* keyPassword, const char* filePath)
 {
     TPM2_DATA* tpm2Data = NULL;
@@ -134,7 +134,7 @@ void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE* rsaBuffer, UINT16 rsaBufferSize
     opt.tcti_conf = NULL;
 
     opt.filename = filePath;
-    opt.parent = 0x81000001;
+    opt.parent = parentHandle;
     opt.exponent = inExponent;
     opt.password = keyPassword;
     opt.parentpw = parentPassword;

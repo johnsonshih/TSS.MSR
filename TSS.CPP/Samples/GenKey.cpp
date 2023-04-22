@@ -9,7 +9,7 @@
 
 #include "Samples.h"
 
-extern "C" void tpm2tss_genkey_rsa(UINT32 inExponent, BYTE * rsaBuffer, UINT16 rsaBufferSize, BYTE * privateBuffer, UINT32 privateBufferSize,
+extern "C" void tpm2tss_genkey_rsa(UINT32 parentHandle, UINT32 inExponent, BYTE * rsaBuffer, UINT16 rsaBufferSize, BYTE * privateBuffer, UINT32 privateBufferSize,
     BYTE * publicBuffer, UINT32 publicBufferSize,
     const char* parentPassword, const char* keyPassword, const char* filePath);
 
@@ -120,7 +120,7 @@ void Samples::CreateChildKey(const TpmCpp::TPM_HANDLE& parentHandle, const std::
 
     auto privateBuffer = newSigKey.outPrivate.toBytes();
     auto publicBuffer = newSigKey.outPublic.asTpm2B();
-
-    tpm2tss_genkey_rsa(exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
+    auto handleValue = parentHandle.handle;
+    tpm2tss_genkey_rsa(handleValue, exponent, rsaPubKey->buffer.data(), (UINT16)rsaPubKey->buffer.size(),
         privateBuffer.data(), privateBuffer.size(), publicBuffer.data(), publicBuffer.size(), parentPassword.c_str(), keyPassword.c_str(), filePath.c_str());
 }
