@@ -247,7 +247,7 @@ tpm2tss_rsa_genkey(RSA* rsa, int bits, BIGNUM* e, const char* password,
     //if (e)
     //    inPublic.publicArea.parameters.rsaDetail.exponent = BN_get_word(e);
 
-    if (password) {
+    if (password && strlen(password) > 0) {
         //DBG("Setting a password for the created key.\n");
         if (strlen(password) > sizeof(tpm2Data->userauth.buffer) - 1) {
             goto error;
