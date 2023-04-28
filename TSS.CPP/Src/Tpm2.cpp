@@ -124,7 +124,7 @@ ByteVec Tpm2::ProcessAuthSessions(TpmBuffer& cmdBuf, TPM_CC cmdCode, size_t numA
             s.sessionHandle = TPM_RH::PW;
             s.nonce.resize(0);
             s.hmac = InHandles[i].GetAuth();
-            //s.sessionAttributes = TPMA_SESSION::continueSession;
+            s.sessionAttributes = TPMA_SESSION::continueSession;
             s.toTpm(cmdBuf);
             continue;
         }
